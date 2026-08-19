@@ -1,6 +1,6 @@
 package org.example.project
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,39 +14,98 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.ktor.utils.io.errors.IOException
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+
+enum class Screen {
+    Welcome,
+    Search
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
+    var currentScreen by remember { mutableStateOf(Screen.Welcome) }
+
     MaterialTheme {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "FAST STOCK",
-                            fontWeight = FontWeight.Black,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Black,
-                        titleContentColor = Color.White
-                    )
+        when (currentScreen) {
+            Screen.Welcome -> {
+                WelcomeScreen(
+                    onTimeout = { currentScreen = Screen.Search }
                 )
             }
-        ) { innerPadding ->
-            StockSearchScreen(modifier = Modifier.padding(innerPadding))
+            Screen.Search -> {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    text = "FAST STOCK",
+                                    fontWeight = FontWeight.Black,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = Color.Black,
+                                titleContentColor = Color.White
+                            )
+                        )
+                    }
+                ) { innerPadding ->
+                    // Make sure your existing StockSearchScreen accepts the modifier
+                    StockSearchScreen(modifier = Modifier.padding(innerPadding))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WelcomeScreen(onTimeout: () -> Unit) {
+    // LaunchedEffect runs as soon as the screen is displayed
+    LaunchedEffect(Unit) {
+        delay(2000)
+        onTimeout()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.ShowChart,
+                contentDescription = "App Logo",
+                tint = Color.White,
+                modifier = Modifier.size(80.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "FAST STOCK",
+                color = Color.White,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Black
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Getting Ready...",
+                color = Color.LightGray,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp
+            )
         }
     }
 }
