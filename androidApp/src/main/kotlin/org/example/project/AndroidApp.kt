@@ -1,9 +1,10 @@
 package org.example.project
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -75,36 +77,48 @@ fun WelcomeScreen(onTimeout: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color(0xFF121212), Color.Black)
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Default.ShowChart,
-                contentDescription = "App Logo",
-                tint = Color.White,
-                modifier = Modifier.size(80.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+            Surface(
+                color = Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.padding(bottom = 24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShowChart,
+                    contentDescription = "App Logo",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .size(60.dp)
+                )
+            }
             Text(
                 text = "FAST STOCK",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Getting Ready...",
-                color = Color.LightGray,
+                text = "Live Market Insights",
+                color = Color.Gray,
                 style = MaterialTheme.typography.bodyMedium
             )
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             CircularProgressIndicator(
                 color = Color.White,
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.dp
+                modifier = Modifier.size(28.dp),
+                strokeWidth = 3.dp
             )
         }
     }
@@ -117,10 +131,12 @@ fun StockSearchScreen(modifier: Modifier = Modifier) {
 
     val coroutineScope = rememberCoroutineScope()
     val apiClient = remember { StockApiClient() }
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -198,21 +214,37 @@ fun StockSearchScreen(modifier: Modifier = Modifier) {
         when (val state = uiState) {
             is StockUiState.Idle -> {
                 Column(
-                    modifier = Modifier.padding(top = 48.dp),
+                    modifier = Modifier.padding(top = 64.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ShowChart,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.LightGray
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        color = Color(0xFFF5F5F5),
+                        shape = RoundedCornerShape(32.dp),
+                        modifier = Modifier.size(100.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = "Search a ticker symbol to inspect live market metrics.",
+                        text = "Ready to Explore?",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Enter a ticker symbol above to see live market data and fundamentals.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
                     )
                 }
             }
@@ -252,13 +284,15 @@ fun StockSearchScreen(modifier: Modifier = Modifier) {
                             )
                         }
                     } catch (e: Exception) {
-                        // 2. If the WebSocket fails, we catch it here.
-                        // The app will survive and just display the static price we already fetched.
                         println("WebSocket disconnected or failed: ${e.message}")
                     }
                 }
 
-                StockCard(currentStock)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    StockCard(currentStock)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    FundamentalsCard(currentStock)
+                }
             }
             is StockUiState.Error -> {
                 Text(
@@ -282,10 +316,10 @@ fun StockCard(stock: Stock) {
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Color.LightGray, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             // Header Row: Symbol, Company & Price
@@ -314,12 +348,19 @@ fun StockCard(stock: Stock) {
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
                     )
-                    Text(
-                        text = "$trendSign$percentageChange%",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = trendColor
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        color = trendColor.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(50),
+                    ) {
+                        Text(
+                            text = "$trendSign$percentageChange%",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = trendColor,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
 
@@ -329,7 +370,7 @@ fun StockCard(stock: Stock) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(90.dp)
+                    .aspectRatio(3.5f)
             ) {
                 SparklineChart(
                     dataPoints = stock.chartDataPoints,
@@ -369,14 +410,74 @@ fun DetailRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.Gray
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.Gray,
+            fontWeight = FontWeight.Medium
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.Black
-        )
+        Surface(
+            color = Color(0xFFF8F8F8),
+            shape = RoundedCornerShape(6.dp),
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, Color(0xFFEEEEEE))
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun FundamentalsCard(stock: Stock) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Fundamentals",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // First Row
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    DetailRow(label = "P/E Ratio", value = if (stock.peRatio > 0) stock.peRatio.toString() else "N/A")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DetailRow(label = "Div Yield", value = if (stock.dividendYield > 0) "${stock.dividendYield}%" else "N/A")
+                }
+                Spacer(modifier = Modifier.width(24.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    // Finnhub returns 10-day average volume in millions
+                    val formattedVolume = if (stock.volume > 0) "${stock.volume}M" else "N/A"
+                    DetailRow(label = "Volume (10d)", value = formattedVolume)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DetailRow(label = "52W High", value = "$${stock.fiftyTwoWeekHigh}")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Second Row for 52W Low (spanning the grid gracefully)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    DetailRow(label = "52W Low", value = "$${stock.fiftyTwoWeekLow}")
+                }
+                Spacer(modifier = Modifier.width(24.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    // Empty column to keep the grid aligned
+                }
+            }
+        }
     }
 }

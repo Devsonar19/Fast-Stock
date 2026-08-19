@@ -32,6 +32,20 @@ data class FinnhubTradeData(
     @SerialName("v") val volume: Double
 )
 
+@Serializable
+data class FinnhubMetricResponse(
+    val metric: FinnhubMetrics? = null
+)
+
+@Serializable
+data class FinnhubMetrics(
+    @SerialName("52WeekHigh") val fiftyTwoWeekHigh: Double? = 0.0,
+    @SerialName("52WeekLow") val fiftyTwoWeekLow: Double? = 0.0,
+    @SerialName("peBasicExclExtraTTM") val peRatio: Double? = 0.0,
+    @SerialName("dividendYieldIndicatedAnnual") val dividendYield: Double? = 0.0,
+    @SerialName("10DayAverageTradingVolume") val volume: Double? = 0.0
+)
+
 data class Stock(
     val symbol: String,
     val companyName: String,
@@ -41,5 +55,10 @@ data class Stock(
     val lowPrice: Double?,
     val previousClose: Double?,
     val chartDataPoints: List<Float>,
-    val marketCap: Double
+    val marketCap: Double,
+    val peRatio: Double,
+    val dividendYield: Double,
+    val volume: Double,
+    val fiftyTwoWeekHigh: Double,
+    val fiftyTwoWeekLow: Double
 )

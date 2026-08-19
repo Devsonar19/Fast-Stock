@@ -42,16 +42,19 @@ class StockApiClient {
         val profileRequest = async {
             httpClient.get("https://finnhub.io/api/v1/stock/profile2?symbol=$symbol&token=$apiKey").body<FinnhubProfileResponse>()
         }
+        val metricsRequest = async {
+            httpClient.get("https://finnhub.io/api/v1/stock/metric?symbol=$symbol&metric=all&token=$apiKey").body<FinnhubMetricResponse>()
+        }
 
         val quote = quoteRequest.await()
         val profile = profileRequest.await()
+        val metricsData = metricsRequest.await().metric
+
 
         val currentPrice = quote.currentPrice ?: 0.0
         val openPrice = quote.openPrice ?: 0.0
         val lowPrice = quote.lowPrice ?: 0.0
         val highPrice = quote.highPrice ?: 0.0
-        val previousClose = quote.previousClose ?: 0.0
-        val percentageChange = quote.percentageChange ?: 0.0
 
         if (quote.currentPrice == 0.0) throw Exception("Ticker '$symbol' not found.")
 
@@ -74,6 +77,11 @@ class StockApiClient {
             previousClose = response.previousClose,
             marketCap = profile.marketCap ?: 0.0,
             chartDataPoints = initialChartPoints,
+            peRatio = metricsData?.peRatio ?: 0.0,
+            dividendYield = metricsData?.dividendYield ?: 0.0,
+            volume = metricsData?.volume ?: 0.0,
+            fiftyTwoWeekHigh = metricsData?.fiftyTwoWeekHigh ?: 0.0,
+            fiftyTwoWeekLow = metricsData?.fiftyTwoWeekLow ?: 0.0
         )
     }
 
@@ -84,11 +92,9 @@ class StockApiClient {
         val jsonParser = Json { ignoreUnknownKeys = true }
 
         httpClient.wss(urlString = wsUrl) {
-            // Tell Finnhub we want to listen to this specific ticker
             val subscribeMessage = """{"type":"subscribe","symbol":"${symbol.uppercase()}"}"""
             send(Frame.Text(subscribeMessage))
 
-            // Continuously listen for incoming messages
             for (frame in incoming) {
                 if (frame is Frame.Text) {
                     val text = frame.readText()
