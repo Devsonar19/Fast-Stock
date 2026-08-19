@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.ktor.utils.io.errors.IOException
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +34,7 @@ fun App() {
                 TopAppBar(
                     title = {
                         Text(
-                            text = "MARKET PULSE",
+                            text = "FAST STOCK",
                             fontWeight = FontWeight.Black,
                             style = MaterialTheme.typography.titleLarge
                         )
@@ -165,7 +166,40 @@ fun StockSearchScreen(modifier: Modifier = Modifier) {
                 }
             }
             is StockUiState.Success -> {
-                StockCard(state.stock)
+                var currentStock by remember(state.stock.symbol) { mutableStateOf(state.stock) }
+
+                LaunchedEffect(currentStock.symbol) {
+                    try {
+                        apiClient.observePriceUpdates(currentStock.symbol).collect { livePrice ->
+                            val safeLivePrice = livePrice ?: currentStock.currentPrice ?: 0.0
+                            val safePrevClose = currentStock.previousClose ?: 0.0
+
+                            val priceDiff = safeLivePrice - safePrevClose
+
+                            val newChange = if (safePrevClose != 0.0) (priceDiff / safePrevClose) * 100 else 0.0
+                            val roundedChange = kotlin.math.round(newChange * 100) / 100.0
+
+                            val newChartPoints = currentStock.chartDataPoints.toMutableList()
+                            newChartPoints.add(safeLivePrice.toFloat())
+
+                            if (newChartPoints.size > 30) {
+                                newChartPoints.removeAt(0)
+                            }
+
+                            currentStock = currentStock.copy(
+                                currentPrice = livePrice,
+                                percentageChange = roundedChange,
+                                chartDataPoints = newChartPoints
+                            )
+                        }
+                    } catch (e: Exception) {
+                        // 2. If the WebSocket fails, we catch it here.
+                        // The app will survive and just display the static price we already fetched.
+                        println("WebSocket disconnected or failed: ${e.message}")
+                    }
+                }
+
+                StockCard(currentStock)
             }
             is StockUiState.Error -> {
                 Text(
@@ -182,7 +216,8 @@ fun StockSearchScreen(modifier: Modifier = Modifier) {
 
 @Composable
 fun StockCard(stock: Stock) {
-    val isPositive = stock.percentageChange >= 0
+    val percentageChange = stock.percentageChange ?: 0.0
+    val isPositive = percentageChange >= 0
     val trendColor = if (isPositive) Color(0xFF00C853) else Color(0xFFD50000)
     val trendSign = if (isPositive) "+" else ""
 
@@ -221,7 +256,7 @@ fun StockCard(stock: Stock) {
                         color = Color.Black
                     )
                     Text(
-                        text = "$trendSign${stock.percentageChange}%",
+                        text = "$trendSign$percentageChange%",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = trendColor
