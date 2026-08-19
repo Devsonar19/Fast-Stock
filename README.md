@@ -1,31 +1,23 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# FAST STOCK 
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+A sleek, real-time market tracking application built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. Designed with a minimalist, black-and-white aesthetic, this app delivers live financial data, sparkline charts, and core market fundamentals across Android and iOS from a single shared codebase.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+## Features
+* **Real-Time Data:** Live WebSocket integration for instantaneous price updates.
+* **Interactive UI:** Dynamic sparkline charts built natively with Compose Canvas.
+* **Market Fundamentals:** Comprehensive data grid including P/E ratios, Market Cap, and 52-week ranges.
+* **Cross-Platform:** Shared networking, state management, and UI logic.
+* **Minimalist Design:** Clean, high-contrast monochrome interface with intuitive colored data pills.
 
-### Running the apps
+## Screenshots
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+|                      Search & Real-Time Chart                      |                          Loading Screen                          |
+|:------------------------------------------------------------------:|:----------------------------------------------------------------:|
+| <img src="androidApp/src/main/screenshots/img_1.png" width="250"/> | <img src="androidApp/src/main/screenshots/img.png" width="250"/> |
 
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
-
-### Running tests
-
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
-
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
-
----
-
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## Tech Stack
+* **UI:** Compose Multiplatform (Material 3)
+* **Networking:** Ktor Client (OkHttp engine) & WebSockets
+* **Serialization:** Kotlinx.Serialization
+* **Concurrency:** Kotlin Coroutines & Flows
+* **Market API:** Finnhub REST & WebSocket APIs
