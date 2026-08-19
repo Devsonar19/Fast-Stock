@@ -1,102 +1,168 @@
 package org.example.project
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import io.ktor.utils.io.errors.IOException
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AndroidApp() {
+fun App() {
     MaterialTheme {
-        StockSearchScreen()
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "MARKET PULSE",
+                            fontWeight = FontWeight.Black,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Black,
+                        titleContentColor = Color.White
+                    )
+                )
+            }
+        ) { innerPadding ->
+            StockSearchScreen(modifier = Modifier.padding(innerPadding))
+        }
     }
 }
 
 @Composable
-fun StockSearchScreen() {
+fun StockSearchScreen(modifier: Modifier = Modifier) {
     var searchQuery by remember { mutableStateOf("") }
-
-    // 1. Single source of truth for our UI state
     var uiState by remember { mutableStateOf<StockUiState>(StockUiState.Idle) }
 
     val coroutineScope = rememberCoroutineScope()
     val apiClient = remember { StockApiClient() }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Search Input with Icons
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { searchQuery = it.uppercase() }, // Auto-capitalize
-            label = { Text("Enter Ticker") },
-            singleLine = true, // Prevents the box from expanding vertically
-            shape = RoundedCornerShape(12.dp), // Matches the card
+            onValueChange = { searchQuery = it.uppercase() },
+            placeholder = { Text("Search ticker (e.g., AAPL)") },
+            singleLine = true,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search"
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear"
+                        )
+                    }
+                }
+            },
+            shape = RoundedCornerShape(50),
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color.Black,
-                unfocusedBorderColor = Color.Gray,
-                cursorColor = Color.Black
+                unfocusedBorderColor = Color.LightGray,
+                cursorColor = Color.Black,
+                focusedLeadingIconColor = Color.Black,
+                unfocusedLeadingIconColor = Color.Gray
             )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Search Action Button
         Button(
             onClick = {
                 coroutineScope.launch {
-                    uiState = StockUiState.Loading // Switch to loading spinner
-
+                    uiState = StockUiState.Loading
                     try {
                         val stock = apiClient.fetchStock(searchQuery)
-                        uiState = StockUiState.Success(stock) // Success! Show the card
+                        uiState = StockUiState.Success(stock)
                     } catch (e: Exception) {
-                        // 2. Catch all errors and extract a user-friendly message
                         val errorMessage = when (e) {
                             is IOException -> "No internet connection. Please check your network."
                             else -> e.message ?: "An unexpected error occurred."
                         }
-                        uiState = StockUiState.Error(errorMessage) // Switch to error text
+                        uiState = StockUiState.Error(errorMessage)
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Black,
                 contentColor = Color.White
             ),
             enabled = searchQuery.isNotBlank() && uiState !is StockUiState.Loading
         ) {
-            Text(if (uiState is StockUiState.Loading) "Searching..." else "Search")
+            Text(
+                text = if (uiState is StockUiState.Loading) "SEARCHING..." else "SEARCH",
+                fontWeight = FontWeight.Bold
+            )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
-        // 3. Cleanly render the UI based on the current state
+        // Dynamic State Rendering
         when (val state = uiState) {
             is StockUiState.Idle -> {
-                Text("Enter a ticker symbol above to see live prices.", color = Color.Gray)
+                Column(
+                    modifier = Modifier.padding(top = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShowChart,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.LightGray
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Search a ticker symbol to inspect live market metrics.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
             is StockUiState.Loading -> {
-                CircularProgressIndicator()
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color.Black)
+                }
             }
             is StockUiState.Success -> {
                 StockCard(state.stock)
@@ -105,7 +171,9 @@ fun StockSearchScreen() {
                 Text(
                     text = state.message,
                     color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 16.dp)
                 )
             }
         }
@@ -114,84 +182,105 @@ fun StockSearchScreen() {
 
 @Composable
 fun StockCard(stock: Stock) {
-    // Determine if the stock is up or down for a subtle indicator
     val isPositive = stock.percentageChange >= 0
-    val trendIcon = if (isPositive) "▲" else "▼"
+    val trendColor = if (isPositive) Color(0xFF00C853) else Color(0xFFD50000)
+    val trendSign = if (isPositive) "+" else ""
 
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
-            .padding(24.dp)
+            .border(1.dp, Color.LightGray, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        // Header: Symbol and Current Price
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stock.symbol,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Text(
-                text = "$${stock.currentPrice}",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-        }
+        Column(modifier = Modifier.padding(20.dp)) {
+            // Header Row: Symbol, Company & Price
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stock.symbol,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = stock.companyName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "$${stock.currentPrice}",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "$trendSign${stock.percentageChange}%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = trendColor
+                    )
+                }
+            }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        // Sub-header: Company Name and Percentage Change
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = stock.companyName,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.Gray
-            )
-            Text(
-                text = "$trendIcon ${kotlin.math.abs(stock.percentageChange)}%",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black // Keeping it monochrome rather than green/red
-            )
-        }
+            // Sparkline Graph
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+            ) {
+                SparklineChart(
+                    dataPoints = stock.chartDataPoints,
+                    color = trendColor
+                )
+            }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider(color = Color.LightGray, thickness = 1.dp)
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+            HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Detail Grid: High, Low, Previous Close
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            DetailItem(label = "High", value = "$${stock.highPrice}")
-            DetailItem(label = "Low", value = "$${stock.lowPrice}")
-            DetailItem(label = "Prev Close", value = "$${stock.previousClose}")
+            // Market Data Grid
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    DetailRow(label = "Prev Close", value = "$${stock.previousClose}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DetailRow(label = "Low", value = "$${stock.lowPrice}")
+                }
+                Spacer(modifier = Modifier.width(24.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    DetailRow(label = "High", value = "$${stock.highPrice}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val formattedCap = if (stock.marketCap > 0) "${(stock.marketCap / 1000).toInt()}B" else "N/A"
+                    DetailRow(label = "Mkt Cap", value = formattedCap)
+                }
+            }
         }
     }
 }
 
 @Composable
-fun DetailItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = Color.Gray
         )
-        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = Color.Black
         )
