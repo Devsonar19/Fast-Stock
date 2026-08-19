@@ -15,7 +15,6 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.material3)
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)

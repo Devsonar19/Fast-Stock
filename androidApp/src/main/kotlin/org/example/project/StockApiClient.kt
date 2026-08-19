@@ -31,7 +31,10 @@ class StockApiClient {
             symbol = query.uppercase(),
             companyName = "Live Market Data",
             currentPrice = response.currentPrice,
-            percentageChange = response.percentageChange
+            percentageChange = response.percentageChange,
+            highPrice = response.highPrice,
+            lowPrice = response.lowPrice,
+            previousClose = response.previousClose,
         )
     }
 }
