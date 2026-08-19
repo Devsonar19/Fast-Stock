@@ -21,6 +21,7 @@ fun StockSearchScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var stockResult by remember { mutableStateOf<Stock?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // 2. Tools we need for background work and networking
     val coroutineScope = rememberCoroutineScope()
@@ -45,11 +46,20 @@ fun StockSearchScreen() {
             onClick = {
                 // We launch a coroutine to call our 'suspend' function without freezing the app
                 coroutineScope.launch {
+                    val trimmedQuery = searchQuery.trim()
                     isLoading = true
+                    errorMessage = null
                     try {
-                        stockResult = apiClient.fetchStock(searchQuery)
+                        val result = apiClient.fetchStock(trimmedQuery)
+                        if (result.currentPrice == 0.0) {
+                            errorMessage = "Stock symbol not found"
+                            stockResult = null
+                        } else {
+                            stockResult = result
+                        }
                     } catch (e: Exception) {
-                        println("Error fetching data: ${e.message}")
+                        errorMessage = "Failed to fetch data: ${e.message}"
+                        stockResult = null
                     } finally {
                         isLoading = false
                     }
@@ -66,6 +76,8 @@ fun StockSearchScreen() {
         // 5. Display the Result
         if (isLoading) {
             CircularProgressIndicator()
+        } else if (errorMessage != null) {
+            Text(errorMessage!!, color = MaterialTheme.colorScheme.error)
         } else {
             stockResult?.let { stock ->
                 StockCard(stock)
