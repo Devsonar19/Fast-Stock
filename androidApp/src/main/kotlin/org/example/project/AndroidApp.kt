@@ -1,15 +1,24 @@
 package org.example.project
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import io.ktor.utils.io.errors.IOException
 
 @Composable
-fun MainApp() {
+fun AndroidApp() {
     MaterialTheme {
         StockSearchScreen()
     }
@@ -17,13 +26,11 @@ fun MainApp() {
 
 @Composable
 fun StockSearchScreen() {
-    // 1. State Variables
     var searchQuery by remember { mutableStateOf("") }
-    var stockResult by remember { mutableStateOf<Stock?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // 2. Tools we need for background work and networking
+    // 1. Single source of truth for our UI state
+    var uiState by remember { mutableStateOf<StockUiState>(StockUiState.Idle) }
+
     val coroutineScope = rememberCoroutineScope()
     val apiClient = remember { StockApiClient() }
 
@@ -31,7 +38,6 @@ fun StockSearchScreen() {
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 3. The Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -41,46 +47,49 @@ fun StockSearchScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 4. The Search Button
         Button(
             onClick = {
-                // We launch a coroutine to call our 'suspend' function without freezing the app
                 coroutineScope.launch {
-                    val trimmedQuery = searchQuery.trim()
-                    isLoading = true
-                    errorMessage = null
+                    uiState = StockUiState.Loading // Switch to loading spinner
+
                     try {
-                        val result = apiClient.fetchStock(trimmedQuery)
-                        if (result.currentPrice == 0.0) {
-                            errorMessage = "Stock symbol not found"
-                            stockResult = null
-                        } else {
-                            stockResult = result
-                        }
+                        val stock = apiClient.fetchStock(searchQuery)
+                        uiState = StockUiState.Success(stock) // Success! Show the card
                     } catch (e: Exception) {
-                        errorMessage = "Failed to fetch data: ${e.message}"
-                        stockResult = null
-                    } finally {
-                        isLoading = false
+                        // 2. Catch all errors and extract a user-friendly message
+                        val errorMessage = when (e) {
+                            is IOException -> "No internet connection. Please check your network."
+                            else -> e.message ?: "An unexpected error occurred."
+                        }
+                        uiState = StockUiState.Error(errorMessage) // Switch to error text
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = searchQuery.isNotBlank() && !isLoading
+            enabled = searchQuery.isNotBlank() && uiState !is StockUiState.Loading
         ) {
-            Text(if (isLoading) "Searching..." else "Search")
+            Text(if (uiState is StockUiState.Loading) "Searching..." else "Search")
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 5. Display the Result
-        if (isLoading) {
-            CircularProgressIndicator()
-        } else if (errorMessage != null) {
-            Text(errorMessage!!, color = MaterialTheme.colorScheme.error)
-        } else {
-            stockResult?.let { stock ->
-                StockCard(stock)
+        // 3. Cleanly render the UI based on the current state
+        when (val state = uiState) {
+            is StockUiState.Idle -> {
+                Text("Enter a ticker symbol above to see live prices.", color = Color.Gray)
+            }
+            is StockUiState.Loading -> {
+                CircularProgressIndicator()
+            }
+            is StockUiState.Success -> {
+                StockCard(state.stock)
+            }
+            is StockUiState.Error -> {
+                Text(
+                    text = state.message,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

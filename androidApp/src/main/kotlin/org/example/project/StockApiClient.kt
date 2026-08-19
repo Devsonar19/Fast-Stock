@@ -6,8 +6,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import org.example.project.FinnhubQuoteResponse
-import org.example.project.Stock
 
 class StockApiClient {
     private val httpClient = HttpClient {
@@ -24,6 +22,10 @@ class StockApiClient {
         val url = "https://finnhub.io/api/v1/quote?symbol=${query.uppercase()}&token=$apiKey"
 
         val response: FinnhubQuoteResponse = httpClient.get(url).body()
+        if (response.currentPrice == 0.0) {
+            throw Exception("Ticker '$query' not found.")
+        }
+
 
         return Stock(
             symbol = query.uppercase(),
